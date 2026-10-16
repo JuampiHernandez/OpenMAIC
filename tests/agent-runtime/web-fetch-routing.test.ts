@@ -287,6 +287,16 @@ describe('Firecrawl behind the same trust boundary', () => {
     });
     expect(firecrawl.extract).not.toHaveBeenCalled();
   });
+  it('checks a redirect target against the session gate before accepting it', async () => {
+    vi.mocked(firecrawl.extract).mockResolvedValue({
+      markdown: text,
+      finalUrl: 'https://unapproved.example/landed',
+    });
+    options.isUrlAllowed.mockImplementation(async (input) => !input.includes('unapproved'));
+    await expect(fetchAndExtractUrl(url, firecrawlOptions)).rejects.toMatchObject({
+      reason: 'blocked',
+    });
+  });
   it('rejects a private final URL reported by Firecrawl', async () => {
     vi.mocked(firecrawl.extract).mockResolvedValue({
       markdown: text,

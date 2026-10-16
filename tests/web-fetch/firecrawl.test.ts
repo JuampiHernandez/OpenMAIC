@@ -55,6 +55,21 @@ describe('Firecrawl web fetch adapter', () => {
     await firecrawl.extract(url, { credentials: { apiKey: 'test-key' }, bodyTimeoutMs: 12_000 });
     expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ timeout: 12_000 });
   });
+  it('reports the post-redirect url as the final URL, not the requested sourceURL', async () => {
+    // Firecrawl's metadata: `url` is where the scrape ended up, `sourceURL` is what was requested.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        scraped({
+          markdown: 'Body',
+          metadata: { sourceURL: 'http://example.com/page', url: 'https://other.example/landed' },
+        }),
+      ),
+    );
+    expect(
+      await firecrawl.extract('http://example.com/page', { credentials: { apiKey: 'test-key' } }),
+    ).toEqual({ markdown: 'Body', finalUrl: 'https://other.example/landed' });
+  });
   it('returns Markdown without optional metadata', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(scraped({ markdown: 'Body' })));
     expect(await firecrawl.extract(url, { credentials: { apiKey: 'test-key' } })).toEqual({
